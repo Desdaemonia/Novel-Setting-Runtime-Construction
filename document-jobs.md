@@ -1,98 +1,97 @@
 # Document Jobs — Detailed Specifications
 
 Each document in the setting system has ONE job. This file defines what
-belongs in each document, what doesn't, how jobs map across platforms, and
-includes structural examples showing what finished documents look like in
-practice.
+belongs in each document, what doesn't, ∧ includes structural examples
+showing what finished documents look like in practice.
 
 See `SKILL.md` Key Terms section for definitions of compaction, corpus bias,
-counter-torque, PC, NPC, and other terms used throughout this document.
+behavior-scoping, PC, NPC, and other terms used throughout this document.
 
 ---
 
-## Operations Manual (Project_Instructions)
+## Operations Manual (in the runtime skill file)
 
-**Written LAST.** This is the runtime registry — it tells the drafting AI
-instance what files exist, when to consult them, and their priority. If a
-document isn't listed here, the AI doesn't know it exists.
+**Finalized LAST.** This is the runtime registry — it tells the drafting AI
+instance what files exist (the bootstrap load list), when to consult them
+(the re-read map), and their priority (the stack, echoed in the setting's
+CLAUDE.md). If a document isn't in the bootstrap list, the AI doesn't know
+it exists.
+
+**Legacy note:** older settings carried this job in a standalone
+`Project_Instructions_[Setting].md`. A PI file found on disk marks a
+pre-skill-file build — fold its contents into the runtime skill file when
+that setting is next refined; build a new one only if a target platform
+requires it.
 
 **Contains:**
-- Complete document registry with filenames and priorities
-- Session protocol (what to read at start, update cadence)
+- Complete document registry with filenames (the bootstrap load list)
+- Session protocol (bootstrap hard gate ∧ canary, what to read at start,
+  Distill/Journal cadence — Distill auto-loads, Journals open on pointer only)
 - Document priority stack (which doc wins on conflict — see below)
 - Compaction recovery instructions (what to do when context gets heavy and
-  rules start getting summarized away; typically: re-read DI and Voice Bible)
+  rules start getting summarized away; typically: re-read the narrative rules and My_Character)
 - Pacing rules (how fast scenes move, what gets expanded vs. compressed)
-- Update workflow for Tracked Items (when entries are added, what qualifies)
-- Pointers to reference documents and when to consult them
+- Pointers to reference documents and when to consult them (the Re-Reads map)
 
 **Does NOT contain:**
 - Story content
 - Character voice rules
 - World lore
-- Anti-patterns (those live in Description_Instructions or Voice_Bible)
+- Anti-patterns (those live in the narrative rules — the other job in the
+  same skill file — or in character-specific anti-pattern sections of
+  My_Character)
 
 **Document priority stack example:**
 ```
-Priority 1: Description_Instructions (narrative rules — overrides all)
-Priority 2: Voice_Bible (character voice — overrides world/state)
-Priority 3: Story_Bible / My_Character + Main_Instructions (character + world)
-Priority 4: Theory_Of_Mind (cognition boundaries)
-Priority 5: Tracked_Items (living state)
-Reference: Opening_Scenario (consult on demand, not loaded every cycle)
+Priority 1: Narrative rules (in the skill file — overrides all)
+Priority 2: My_Character (PC voice, cognition, capabilities — overrides world)
+Priority 3: Main_Instructions (world rules, factions, physics)
+Priority 3: NPC_Reference (NPC roster)
+Reference (on-demand): lore files, supplemental mechanics
 ```
 When two documents conflict, the higher-priority document wins. This stack
-is listed in Project_Instructions so the runtime instance can resolve
-conflicts without guessing.
+lives in the runtime skill file ∧ is echoed in the setting's CLAUDE.md
+(Document Priority section) so the runtime instance can resolve conflicts
+without guessing — twice, for compaction resilience.
 
-**Structural example:**
+**Structural example (the operations sections of a runtime skill file —
+the Narrative Rules share the same file):**
 ```markdown
-# Project Instructions — [Setting Name]
+# [Setting] — Campaign Runner
 
-## Document Registry
-| Document | Filename | Priority | Load |
-|---|---|---|---|
-| Narrative Rules | Description_Instructions_[Setting].md | 1 | Always |
-| Character Voice | Voice_Bible_[Setting].md | 2 | Always |
-| Character + World | Story_Bible_[Setting].md | 3 | Always |
-| Cognition | Theory_Of_Mind_[Setting].md | 4 | Always |
-| State | Tracked_Items_[Setting].md | 5 | Always |
-| Backstory | Opening_Scenario_[Setting].md | Ref | On demand |
+## Bootstrap
+Hard gate: no fiction before bootstrap completes.
+Load all core files:
+- [setting path]\CLAUDE.md
+- [setting path]\My_Character.md
+- [setting path]\NPC_Reference.md
+Then glob Compaction_*.md ∧ Distill_*.md in the setting directory; read all
+found; report one flat state line. Do not auto-load Journal_*.md.
+Canary: output `✅ Bootstrap complete.` + the state line. Stop and wait.
 
-## Session Protocol
-1. Load all Priority 1-5 documents
-2. Read Tracked Items for current state
-3. Begin summary→draft→edit cycle
+## Authority
+Skill first. Core docs next. Recall last.
+[DEBUG protocol; OOC authentication gate]
 
-## Compaction Recovery
-When context gets heavy: re-read Description_Instructions and Voice_Bible
-in full. These contain the rules most vulnerable to compaction loss.
+## Turn Contract / Per-Turn Workflow
+[the Narrative Rules job — see that section]
 
-## Tracked Items Update Rules
-Add entries when: new character introduced, relationship materially changes,
-world-state shifts, significant event occurs.
-Do NOT add: routine events, minor dialogue, things that don't affect future
-scenes.
-
-## Pacing
-[Setting-specific pacing rules — e.g., "soap opera style: deep focus on
-interpersonal drama, fast-forward base-building mechanics"]
+## Re-Reads
+[per-doc map: which sections to re-read when a need fires; pacing notes]
 ```
 
-**Platform mapping:**
-- AI project workspace: standalone `Project_Instructions_[Setting].md`
-- JSON platform: absorbed into `instructions` field metadata, though
-  much of this is implicit in the platform's own session handling
+**File:** the runtime skill file (shared with the Narrative Rules), with the
+priority stack echoed in the setting's CLAUDE.md.
 
 ---
 
-## Narrative Rules (Description_Instructions)
+## Narrative Rules (in the runtime skill file)
 
-**Priority 1 (highest). SETTING-AGNOSTIC. NEVER modified during adaptation.**
+**Priority 1 (highest). Largely universal across settings. Refined as failure modes are found.**
 
-The single most load-bearing document. Contains how to WRITE the output —
+The single most load-bearing set of rules. Contains how to WRITE the output —
 tone, NPC behavior, dialogue rules, formatting, and critically, the
-accumulated anti-patterns and counter-torque rules that prevent the AI's
+accumulated anti-patterns and behavior-scoping rules that prevent the AI's
 default failure modes.
 
 **Contains:**
@@ -101,30 +100,28 @@ default failure modes.
   functions orbiting the PC)
 - Scene construction rules (scenes are webs of competing forces, not
   playlists of beats to check off; forces stay unresolved and interfere)
-- Anti-patterns with ❌ flags — each following the four-part structure:
-  positive framing, named failure, contrast paragraph, root cause. The
-  universal anti-patterns include: The Mannequin, The Closed Loop, Beautiful
+- Positive structures — the executable thing to BUILD, each making a failure impossible (→ Author the ✅, not the ❌). The universal failures they guard include: The Mannequin, The Closed Loop, Beautiful
   Nothing, Terminal Velocity, The Gap Is The Scene, Thread Compounding, NPC
   Gravity, The Exposition Mouth, The Aftermath Camera, Ambient Knowledge,
   The Empathy Cheat. See `failure-modes.md` in this directory for the full
   catalog with root causes and fixes.
-- Counter-torque against the Softening Tax (rules that name the specific
-  softening the AI will want to do and explain why it's wrong)
+- Behavior-scoping against the Claude Tax (rules that name the specific
+  softening the AI will reach for and describe the honest version instead)
 - Dialogue rules (back-and-forth required; no monologues that exhaust scene
   meaning; no character delivers complete emotional thesis in one speech)
 - Formatting requirements (output length, section structure, etc.)
 
 **Does NOT contain:**
 - Setting-specific lore
-- Character voice (that's the Voice Bible's job)
-- Session protocol (that's Project Instructions)
+- Character voice (that's My_Character's job)
+- Session protocol (that's the Operations Manual — the other job in the same skill file)
 
-**Structural example (abbreviated — a real DI may be 20+ pages). For the
-full catalog of named anti-patterns with root causes and fixes, see
-`failure-modes.md` in this directory. For how to construct new anti-patterns,
-see `anti-pattern-methodology.md`:**
+**Structural example (abbreviated — a real narrative-rules set may be 20+
+pages). For the full catalog of named anti-patterns with root causes and
+fixes, see `failure-modes.md` in this directory. For how to construct new
+anti-patterns, see `anti-pattern-methodology.md`:**
 ```markdown
-# Description Instructions
+# Narrative Rules
 
 ## Prose Standards
 Every paragraph must advance at least one of: plot, character revelation,
@@ -158,36 +155,33 @@ A complete thesis IS resolution — nothing left to explore.
 ### ❌ The Closed Loop
 [etc. — each anti-pattern follows the same four-part structure]
 
-## Counter-Torque
-The AI will want to lighten dark content, resolve conflict early, and
-steer toward positive outcomes. This is the Softening Tax. Resist it.
-[Specific rules naming specific tendencies and why they're wrong here]
+## Behavior-Scoping (against the Claude Tax)
+The AI will want to lighten dark content, resolve conflict early, and steer
+toward positive outcomes. Name each specific tendency and describe what the
+honest version looks like instead.
+[Specific rules naming specific tendencies + the correct behavior]
 ```
 
-**Why it's closed:** Every rule that "looks setting-specific" is actually
-compensating for an AI failure mode that persists across all settings. When
-it gets "adapted," load-bearing rules get removed and failures return —
-often not discovered until mid-campaign when a scene dies to a problem that
-was already solved three iterations ago. If changes are needed, the user
-makes them manually without the AI's assistance.
+**Why most of it carries forward:** Every rule that "looks setting-specific"
+is usually compensating for an AI failure mode that persists across settings,
+so the proven set ports as a baseline rather than being rebuilt each time.
+Refine it deliberately — dropping a load-bearing rule lets a solved failure
+return, often undiscovered until mid-campaign when a scene dies to a problem
+fixed three iterations ago. Change with intent, not by reflexively "adapting."
 
-**Platform mapping:**
-- AI project workspace: standalone `Description_Instructions_[Setting].md` (name
-  includes setting for organization; contents are identical across settings)
-- JSON platform: core rules compressed into `instructionBlocks[]`
-  entries. Compression loses nuance — the markdown version is canonical.
+**File:** the runtime skill file, alongside the Operations Manual (not a separate document).
 
 ---
 
-## Character Voice (Voice_Bible / My_Character voice section)
+## Character (My_Character)
 
 **Priority 2. Built FIRST among setting-specific documents.**
 
-How the PC sounds. The cognitive mode through which all prose is filtered.
-This is not just dialogue — it's the entire narrative register. A character
-who thinks architecturally produces prose full of structural metaphors and
-spatial reasoning. A character who thinks musically produces prose with
-rhythm, dynamics, and performance imagery.
+The PC: voice, cognitive mode, capabilities, identity. Voice is the core of
+this document because everything else flows from getting it right — if the
+voice is wrong, perfect world-building doesn't matter. Backstory and
+capabilities live here too because they're inseparable from who the character
+IS at play-start.
 
 **Contains:**
 - Primary cognitive mode (analytical, architectural, musical, instinctive,
@@ -201,100 +195,86 @@ rhythm, dynamics, and performance imagery.
   these are often different registers)
 - Voice anti-patterns (specific wrong-voice examples with corrections —
   "the AI will write the character as [X] when she should sound like [Y]")
-- Secondary layers (a musician character's musical vocabulary surfaces more
-  when power/performance is relevant, then recedes during mundane scenes)
+- PC abilities, capabilities, limitations (what they can do, what they can't,
+  what costs them to use their powers)
+- PC identity and current-frame backstory (who they are at play-start — deep
+  historical facts live in Character_Lore instead)
 
 **Does NOT contain:**
-- Backstory (that's Character + World)
-- World lore
-- NPC voice (that's Description_Instructions)
+- World rules / factions / physics (that's Main_Instructions)
+- NPC rosters (that's NPC_Reference)
+- Pre-conversion / deep historical facts (that's Character_Lore)
+- NPC voice (that's the narrative rules)
+- Setting-wide mechanics detail (that's Supplemental_Lore)
 
 **Structural example:**
 ```markdown
-# Voice Bible — [Setting Name]
+# My Character — [Setting Name]
 
 ## Primary Cognitive Mode: Architectural
 [Character] processes the world as structures. Relationships are
 load-bearing or decorative. Conversations have foundations and facades.
 Emotions are rooms she enters or avoids. Danger is structural failure.
 
-The prose should feel like walking through a building — aware of what
-holds things up, what's cosmetic, where the exits are.
-
 ## Metaphor Framework
 Draw from: engineering, construction, spatial reasoning, structural
-analysis. "The conversation was load-bearing — remove it and the whole
-evening collapses." "She bricked up that topic three years ago."
-
-Do NOT draw from: nature imagery (she's not outdoorsy), musical metaphor
-(that's a different character), combat/military metaphor (she doesn't
-think in those terms).
+analysis. Do NOT draw from: nature imagery, musical metaphor, military
+metaphor.
 
 ## Sentence Patterns
 Default: medium-length declarative sentences with occasional sharp
-fragments for emphasis. Internal monologue uses more fragments than
-dialogue. Under stress, sentences get shorter and more clipped. When
-comfortable, they lengthen and include parenthetical asides.
+fragments for emphasis. Under stress, clipped. When comfortable, longer.
 
 ## Dialogue Voice
-Spoken aloud: direct, slightly clipped, uses deflection humor. Avoids
-emotional vocabulary — describes what she'll DO rather than what she
-FEELS. When pressed emotionally, goes monosyllabic or changes subject.
+Direct, slightly clipped, deflection humor. Avoids emotional vocabulary.
+When pressed emotionally, goes monosyllabic or changes subject.
+
+## Capabilities
+[What they can do. What costs them. Hard limits.]
+
+## Identity + Current Frame
+[Who they are at play-start — NOT deep history.]
 
 ## Anti-Patterns
 
 ### ❌ The Poet
 The AI will want to make her lyrical and emotionally articulate. She is
-neither. She is precise and evasive. If the prose sounds like a poem,
-it's wrong.
+neither. Precise and evasive. Poem-sounding prose = wrong.
 
 ### ❌ The Therapist
-The AI will have her name her emotions clearly and process them aloud.
-She doesn't. She builds walls and changes the subject. Insight arrives
-through action, not dialogue.
-
-## Secondary Layer: Music
-[If applicable — e.g., musical vocabulary surfaces during performance
-scenes but does not dominate the narrative register otherwise]
+She doesn't name emotions and process them aloud. She builds walls and
+changes subject. Insight arrives through action.
 ```
 
-**Key principle:** Voice is the FIRST document built because everything else
-flows from getting it right. If the voice is wrong, perfect world-building
-doesn't matter — every scene will feel off.
+**Key principle:** Voice is built first because everything else flows from
+getting it right. Keep to the 150-line cap — details that can live in
+Character_Lore (deep history) or Supplemental_Lore (mechanics) should.
 
-**Platform mapping:**
-- AI project workspace: standalone `Voice_Bible_[Setting].md` OR embedded as a
-  section within `My_Character_[Setting].md`
-- JSON platform: `characters[].description` field, often combined with
-  character details. The voice section should be clearly marked/separated.
+**File:** `My_Character_[Setting].md`.
 
 ---
 
-## Character + World (Story_Bible / My_Character + Main_Instructions)
+## World (Main_Instructions)
 
-**Priority 3. Built AROUND the voice.**
+**Priority 3. Built AROUND the character.**
 
-Who the PC is and the world they exist in. Static reference for the world at
-play-start.
+The world at play-start. Static reference for how the setting works.
 
 **Contains:**
-- PC backstory and relationships (how they got here, who matters to them)
-- PC abilities, powers, limitations (what can they do, what can't they)
-- World rules and cosmology (how the setting works — magic systems, power
-  structures, physical laws that differ from reality)
-- Faction/organization structures (who the power players are, what they want)
-- NPC roster (significant recurring characters with: name, role, personality,
-  relationship to PC, appearance, and crucially — their own agenda and what
-  they want independently of the PC)
+- World rules and cosmology (magic systems, power structures, physical laws
+  that differ from reality)
+- Faction/organization structures (who the power players are, what they want,
+  where they conflict)
 - Geography and setting details
-- Pre-play timeline (what happened before play begins)
+- World-level pre-play context (what state is the world in)
 
 **Does NOT contain:**
-- Runtime state (that's Tracked Items — the Story Bible describes the world
-  at play-start; anything that changes during play goes elsewhere)
-- Prose style rules (that's Description_Instructions)
-- Character voice/cognitive mode (that's Voice_Bible)
-- Session protocol (that's Project_Instructions)
+- Runtime state
+- Prose style rules (that's the narrative rules)
+- Character voice/cognitive mode (that's My_Character)
+- NPC rosters (that's NPC_Reference)
+- Specialized mechanics detail (that's Supplemental_Lore)
+- Session protocol (that's the Operations Manual, in the runtime skill file)
 
 **Key principle:** This document describes the world at play-start. It does
 NOT accumulate runtime state. State claims in this document are permanent —
@@ -303,227 +283,121 @@ every one is a potential trojan. Write "the PC's default mode is isolation"
 current state that the AI will refuse to let change). See ❌ State-as-Static
 Trojans in `failure-modes.md` for the full failure mode.
 
-**Structural example (combined Story Bible):**
+**Structural example:**
 ```markdown
-# Story Bible — [Setting Name]
+# Main Instructions — [Setting Name]
 
-## The PC
-[Name, age, background summary, core personality, what drives them]
-
-### Backstory
-[Pre-play history — how they got to where the story begins]
-
-### Abilities and Limitations
-[What they can do, what they can't, what costs them to use their powers]
-
-### Relationships
-[Key relationships AT PLAY START — describe the dynamic, not the state]
-
-## The World
-
-### Rules
+## World Rules
 [How magic/technology/power works. What's possible, what isn't.]
 
-### Factions
+## Factions
 [Who the power players are. What each faction wants. Where they conflict.]
 
-### Geography
+## Geography
 [Key locations and what makes them significant]
 
-## NPC Roster
+## World Frame at Play-Start
+[State of the world as play begins — describe tendencies, not fixed states.
+See ❌ State-as-Static Trojans in failure-modes.md]
+```
 
-### [NPC Name]
+**Key principle:** 100-line cap. Detail that doesn't have to live in the
+always-loaded frame belongs in Supplemental_Lore instead. See ❌ Chassis
+Inflation in failure-modes.md.
+
+**File:** `Main_Instructions_[Setting].md`.
+
+---
+
+## NPC Reference (NPC_Reference)
+
+**Priority 3. Always loaded.**
+
+Significant recurring NPCs with driver/capability fields. Split from the
+character+world docs because the roster tends to grow past what MC/MI's
+caps (150/100) can absorb.
+
+**Contains:**
+
+### [NPC Name] ([Character]/[Source media]-coded; secondaries as needed)
 - **Role:** [their function in the world independent of the PC]
-- **Personality:** [how they act, what they value]
-- **Agenda:** [what they want — this exists whether or not the PC is present]
+- **Personality:** [2-4 non-conflicting traits; feeds the runtime's trait-matching checks]
+- **DRIVER:** [one sentence — what they spend their life doing, what motivates them across scenes]
+- **CAPABILITY:** [one sentence — tool/leverage the driver implies (badge, claim, reach, knowledge, relationship-leverage — open set); what gets EXERCISED when the driver creates conflict with the PC]
 - **Relationship to PC:** [the dynamic at play-start]
-- **Appearance:** [physical description]
+- **Appearance:** [physical description — face, hair, build, skin, eyes, distinguishing features. Enough to describe them walking into a room.]
+- **Outfit:** [what they're wearing — enough to dress them in prose. For settings w/ identity markers (collars, brands, piercings, tattoos, sigils — open set), include material, stone/gem, location on body. These are load-bearing identity details ≠ decorative.]
+- **Equipment:** [signature items, weapons, wand/focus form, mount (species + appearance + distinguishing features). Enough to put something in their hand or render something beside them. For characters w/ transformation/warlock/henshin states, include what they look like in that state.]
 
 [Repeat for each significant NPC]
 
-## Pre-Play Timeline
-[Chronological events leading to the start of play]
-```
+**CRITICAL — render details are load-bearing.** Structural data (drivers,
+relationships, faction positions) survives compaction naturally — the runtime
+reconstructs WHO and WHY from context. Physical details (appearance, outfit,
+equipment) vanish without documentation and can't be reconstructed. An NPC
+entry that has a driver and no outfit is a skeleton — the runtime knows what
+the character wants but has to invent what they look like every scene,
+inconsistently. See ❌ The Skeleton Error in `failure-modes.md`.
 
-**Document split options:**
-- Combined: single `Story_Bible_[Setting].md`
-- Split: `My_Character_[Setting].md` (PC) + `Main_Instructions_[Setting].md`
-  (world). The split benefits large worlds with extensive faction systems.
+**CRITICAL — every character carries a casting reference in its entry header:
+character name + source media, BOTH.** (`Makima/Chainsaw Man-coded`,
+`HAL 9000/2001 + HK-47/KOTOR coded` — open set; mark secondaries where a
+second source helps: `Toby/Quest for Glory IV-coded; Ludo/Labyrinth
+secondary`.) The pair routes voice, cadence, body, ∧ want to ONE specific
+rendition — the same logic as style anchors, where the work routes truer than
+the author: the name picks the character, the source pins WHICH one. Half a
+pair decays. Source-only is a vibe the runtime fills from corpus average;
+name-only goes invisible the moment context drifts — it reads as just a name
+∧ the casting silently stops routing (live case: Deadlight Inn's Toby ∧
+Katrina, named FOR Quest for Glory IV's, lost their citations ∧ played
+uncoded — the names survived, the casting vanished). Runtime-minted
+characters get their pair on first appearance, same as rostered cast (put
+the requirement in the minting rules, not just the roster). Codings give
+register ∧ driver; they do not import source plot.
 
-**Platform mapping:**
-- AI project workspace: one or two files as above
-- JSON platform: `background` (backstory/world), `characters[].description`
-  (PC details), `npcs[]` (NPC roster), `instructionBlocks[]` (world rules)
+**Repairing a half-pair is a lookup, never a guess.** Verify the work exists
+∧ pull the missing half FROM the source. Titles collide — when they do, the
+citation carries the author (three published novels are named *The Killing
+Kind*; the pair reads `Rob Scott/The Killing Kind, Bryan Smith`). A missing
+character name is found by matching FUNCTION to the entry (the everyman swept
+along by the killer he's bound to → that book's Rob Scott). A character with
+several renditions gets WHICH pinned, ∧ the entry's own body votes (a
+warm-voiced therapy practice, jokes landing a half-second wrong →
+`Hannibal Lecter/Hannibal NBC`, not Hopkins). (Open set.) Every half the
+builder supplies is the user's casting to veto — flag it out loud, never land
+it silent.
 
----
+**DRIVER vs CAPABILITY — why both.** Driver is WHAT the NPC pursues (across scenes, not just this one). Capability is HOW the driver gets pressed against the PC when they collide. "Reclaim the escaped asset" is driver; "contract claim, military cyber, enforcer network" is capability. The runtime's per-turn NR lookup pulls both fields directly — no prose extraction, no inference. Recognition of the driver alone isn't enough; the capability tells the runtime what gets EXERCISED against the PC when the driver creates tension. Without an explicit capability field, runtimes default to soft contest (acknowledgment, concern, careful words) when the documented NPC should be pressing hard.
 
-## Cognition Firewall (Theory_Of_Mind)
+**Generate-as-needed worlds.** For settings that include worlds where NPCs are generated on-the-fly (canon fandoms — The Boys, Hazbin Hotel, Mad Max; or original worlds where populations aren't pre-rostered), provide category-level DRIVER/CAPABILITY templates per typical role. "Supes: DRIVER = narrative control, public image, brand. CAPABILITY = Compound V powers, Vought PR machinery, fame-as-weapon." The templates give invented-on-the-fly NPCs documented driver/capability shapes on first appearance instead of runtime invention from training corpus — which is the worst case for Friction Abdication (made-up NPCs with no documented driver have nothing to hold against evasion).
 
-**Priority 4. SETTING-AGNOSTIC. NEVER modified during adaptation.**
+**Upgrades the older single-field "Agenda"** — split cleanly into Driver (the what) + Capability (the how-it-presses). Settings with existing Agenda entries can be refined in place; the split is a clarification, not a rewrite.
 
-Character cognition modeling. Who knows what. Prevents knowledge bleeding —
-the tendency for information known to the AI (which sees everything) to leak
-into characters who shouldn't have that information.
-
-**Contains:**
-- Rules for what the PC can and cannot know (the PC only knows what they've
-  directly experienced, been told, or could reasonably infer)
-- Information transfer requirements (knowledge moves ONLY through explicit
-  communication — a character doesn't know something just because another
-  character knows it, or because it happened in a scene they weren't in)
-- NPC knowledge boundaries (NPCs only know what THEY have experienced,
-  been told, or could reasonably infer — they don't have access to the
-  PC's internal monologue or offscreen events)
-- Anti-patterns for ambient knowledge (the AI defaulting to having characters
-  "just know" things for plot convenience)
-- Rules preventing the AI from having NPCs react to information they
-  shouldn't have (e.g., an NPC responding to the PC's unspoken feelings,
-  or knowing about an event that happened when they weren't present)
-
-**Does NOT contain:**
-- Setting-specific knowledge lists (don't enumerate "Michael doesn't know
-  about X" — instead, state the RULE: "characters only know what they've
-  been told or directly witnessed")
-- Character backstory
-- World lore
-
-**Structural example (abbreviated):**
-```markdown
-# Theory of Mind
-
-## Core Rule
-A character knows ONLY what they have:
-1. Directly experienced (been present for)
-2. Been explicitly told by another character
-3. Could reasonably infer from available evidence
-
-## Information Transfer
-Knowledge moves through: spoken dialogue, written messages, observable
-behavior, logical inference from known facts.
-
-Knowledge does NOT move through: narrative proximity, dramatic
-convenience, the AI's awareness of the full story, "intuition" that
-happens to be correct about unobserved facts.
-
-## Anti-Patterns
-
-### ❌ Ambient Knowledge
-The AI has characters react to information they haven't received.
-NPCs comment on the PC's emotional state when they haven't observed
-anything that would reveal it. Characters reference events they
-weren't present for.
-
-### ❌ The Empathy Cheat
-NPCs demonstrate uncanny emotional perception — correctly reading
-the PC's unspoken feelings, knowing exactly what they need to hear,
-understanding their trauma without being told. Real people are bad
-at reading each other. NPCs should be too.
-```
-
-**Why it's closed:** Same reason as Description_Instructions. The rules
-compensate for AI tendencies (knowledge bleeding is a universal failure mode)
-not setting-specific concerns. If changes are needed, the user makes them
-manually without the AI's assistance.
-
-**Platform mapping:**
-- AI project workspace: standalone `Theory_Of_Mind_[Setting].md`
-- JSON platform: rules compressed into `instructionBlocks[]` entries
+**File:** `NPC_Reference_[Setting].md`.
 
 ---
 
-## Tracked Items
+## Lore / Supplemental Documents (On-Demand)
 
-**Priority 5. NOT built during construction. Created at runtime start.**
+**Reference priority. NOT always loaded — consulted when scene calls for them.**
 
-Living state during play. What's happened, what matters, what's changed.
-This is the ONLY document that accumulates new information during play.
+Static references too large or specialized to fit in the always-loaded frame.
+Typical split:
 
-**Contains (at runtime):**
-- Significant events and their consequences
-- Relationship changes (shifts from play-start dynamics)
-- World-state changes (factions gained/lost power, locations destroyed/
-  discovered, rules of the world altered)
-- New characters/locations established during play
-- Anything that proves worth remembering
+**[Character]_Lore** — Deep pre-play historical facts about the PC. Anything
+that isn't needed to draft a typical scene but matters when the PC's history
+comes up. Sectioned by topic so the runtime can pull only the relevant slice.
 
-**Structure:**
-- No template, no pre-formatted sections
-- Entries earn their place by proving they matter — not every event gets
-  tracked, only the ones that will affect future scenes
-- Added by significance, not by schedule
-- Project_Instructions describes when/how entries are added, but the
-  file itself doesn't exist until runtime
+**Supplemental_Lore** — Specialized mechanics: magic system cost tables, tier
+breakdowns, faction politics too detailed for MI, time-travel rules, etc.
+Sectioned so the runtime pulls only what the current scene invokes.
 
-**Key principle:** The Story Bible is static reference for play-start.
-Tracked Items is where change lives. This separation prevents state
-claims from becoming permanent trojans in the reference document.
+**Additional roster docs** — Unit references, performer rosters, faction
+breakdowns — anything specialized enough that the main NPC_Reference shouldn't
+carry it.
 
-**Example runtime entries** (illustrative — names are from a hive-mind sci-fi
-sci-fi setting to show the format, not canonical events):
-```markdown
-# Tracked Items — [Setting Name]
+**CRITICAL:** Reference documents MUST be registered in the runtime skill
+file — in the bootstrap list (always-loaded) ∨ the Re-Reads map (on-demand).
+If the skill file doesn't list it, the AI doesn't know it exists.
 
-## Session 3
-- [PC] met [Companion] in the tunnels. He claims to be a stuffed bear
-  that walks. She hasn't questioned this. (Relationship: wary trust)
-- First hive drone created. Named herself Albedo.
-- [Antagonist] confirmed as having hired the assassin. [PC] knows.
-
-## Session 5
-- Albedo defied a direct order. [PC] let it stand. (Precedent set:
-  subordinates have autonomy. Will affect future command dynamics.)
-- Second drone discovered the underground river system. Mapped three new
-  tunnel branches. (Expansion: south corridor now viable)
-- [Companion] growled at Albedo — first sign of tension between companion
-  and swarm. [PC] noticed but didn't intervene.
-```
-
-**Platform mapping:**
-- AI project workspace: standalone `Tracked_Items_[Setting].md`
-- JSON platform: platform handles tracked items natively through
-  its own UI/state system
-
----
-
-## Reference Documents
-
-**Built after core docs. Not every setting needs these.**
-
-Static references too large or specialized to fit in Character + World docs.
-Consulted ON DEMAND — not loaded every cycle.
-
-**Common types:**
-
-**Opening_Scenario** — Canonical pre-play backstory. How events unfolded
-before play begins. May include full narrative prose (a prologue the
-drafting instance reads for voice and grounding, not just dry facts).
-Other documents POINT HERE rather than duplicating backstory. Every setting
-benefits from having one.
-
-```markdown
-# Opening Scenario — [Setting Name]
-
-## The Event
-[What happened, told as narrative. Not a timeline — a STORY. This gives
-the drafting instance voice calibration as well as factual grounding.]
-
-## Where We Are Now
-[The state of the world as play begins. What the PC knows. What they
-don't. Where they are physically and emotionally.]
-```
-
-**Roster/Reference docs** — Unit references, faction breakdowns, performer
-rosters — anything too specialized to fit in the Story Bible but needed
-for accurate drafting.
-
-**Supplemental rules** — Specialized mechanics too detailed for main docs
-(e.g., a unit reference with tier breakdowns, a magic system with
-detailed cost calculations).
-
-**CRITICAL:** Reference documents MUST be registered in Project_Instructions.
-If PI doesn't list it, the AI doesn't know it exists.
-
-**Platform mapping:**
-- AI project workspace: standalone files in the setting directory
-- JSON platform: `instructionBlocks[]` entries, or referenced through
-  the `instructions` field
+**File:** standalone files in the setting directory.
